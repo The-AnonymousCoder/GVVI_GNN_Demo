@@ -1,0 +1,51 @@
+# GVVI Grid Demo V2 - Optimization config
+
+data:
+  grid_csv: "greenery/df_grid_ply.csv"
+  veg_raster: "greenery/veg_raster_buffer_100.tif"
+  svi_csv: "viewpoints/SVI_position_road.csv"
+  wvi_csv: "viewpoints/window_view_location.csv"
+  dvi_csv: "viewpoints/DVI_position_60.csv"
+  gvvi_s_tif: "reference/GVVI_S.tif"
+  gvvi_w_tif: "reference/GVVI_W.tif"
+  gvvi_d_tif: "reference/GVVI_D.tif"
+  gvvi_tif: "reference/GVVI.tif"
+
+graph:
+  k_local: 8
+  k_context: 24
+
+features:
+  radii: [50, 100, 250, 500]
+  height_radius: 250
+  heading_radius: 250
+  density_radius: 50
+  fov_half_angle: 60
+  distance_scales: [50, 100, 250]
+
+model:
+  hidden_dim: 256
+  sage_dim1: 256
+  sage_dim2: 128
+  fusion_dim: 256
+  dropout: 0.15
+
+training:
+  seed: 42
+  train_frac: 0.80
+  val_frac: 0.05
+  test_frac: 0.15
+  lr: 0.001
+  weight_decay: 0.0001
+  max_epochs: 1500
+  early_stopping_patience: 150
+  gradient_clip: 5.0
+  lambda_cls: 0.25
+  lambda_reg: 1.0
+  lambda_gvvi: 1.0
+  lambda_rank: 0.10
+
+gvvi_weights:
+  s: 3.0
+  w: 2.0
+  d: 1.0

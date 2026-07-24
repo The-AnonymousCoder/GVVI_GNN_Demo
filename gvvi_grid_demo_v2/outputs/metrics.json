@@ -1,0 +1,30 @@
+{
+  "GVVI_S": {
+    "MAE": 0.068215,
+    "RMSE": 0.068325,
+    "R2": 0.0,
+    "Pearson": 0.0,
+    "Spearman": 0.0
+  },
+  "GVVI_W": {
+    "MAE": 0.048485,
+    "RMSE": 0.048631,
+    "R2": 0.0,
+    "Pearson": 0.0,
+    "Spearman": 0.0
+  },
+  "GVVI_D": {
+    "MAE": 0.090935,
+    "RMSE": 0.091184,
+    "R2": 0.0,
+    "Pearson": 0.0,
+    "Spearman": 0.0
+  },
+  "GVVI": {
+    "MAE": 0.065425,
+    "RMSE": 0.065493,
+    "R2": 0.0,
+    "Pearson": 0.0,
+    "Spearman": 0.0
+  }
+}
