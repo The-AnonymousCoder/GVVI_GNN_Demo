@@ -185,6 +185,39 @@ def build_grid_features(data_root, grid_df, cfg):
     feature_blocks.append(density)
     feature_names.append("neighbor_density")
 
+    # Viewpoint proportion features (ratio of each type per radius)
+    for r in radii:
+        svi_key = f"svi_count_{r}"
+        wvi_key = f"wvi_count_{r}"
+        dvi_key = f"dvi_count_{r}"
+        svi_idx = feature_names.index(svi_key)
+        wvi_idx = feature_names.index(wvi_key)
+        dvi_idx = feature_names.index(dvi_key)
+        total = feature_blocks[svi_idx] + feature_blocks[wvi_idx] + feature_blocks[dvi_idx] + 1e-8
+        feature_blocks.append(feature_blocks[svi_idx] / total)
+        feature_names.append(f"svi_ratio_{r}")
+        feature_blocks.append(feature_blocks[wvi_idx] / total)
+        feature_names.append(f"wvi_ratio_{r}")
+        feature_blocks.append(feature_blocks[dvi_idx] / total)
+        feature_names.append(f"dvi_ratio_{r}")
+
+    # Circular variance of headings at 250m
+    h_radius = cfg["features"]["heading_radius"]
+    for prefix, csv_name, x_col, y_col, z_col, h_col in vp_configs:
+        vp_df = pd.read_csv(f"{data_root}/viewpoints/{csv_name}")
+        vp_tree, vp_coords = _build_viewpoint_tree(vp_df, x_col, y_col)
+        vp_heading = vp_df[h_col].values.astype(np.float32)
+        indices = vp_tree.query_radius(grid_centers, r=h_radius)
+        heading_var = np.zeros(n_nodes, dtype=np.float32)
+        for i, idx in enumerate(indices):
+            if len(idx) > 0:
+                headings_rad = np.deg2rad(vp_heading[idx])
+                # Circular variance = 1 - R, where R = |mean(e^{i*theta})|
+                R = np.abs(np.mean(np.exp(1j * headings_rad)))
+                heading_var[i] = 1.0 - R
+        feature_blocks.append(heading_var)
+        feature_names.append(f"{prefix}_heading_var")
+
     # Log-transform count features (skewed distributions)
     count_cols = [k for k in feature_names if "count" in k]
     for i, name in enumerate(feature_names):
