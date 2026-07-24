@@ -22,8 +22,8 @@ features:
   density_radius: 50
 
 model:
-  hidden_dim1: 128
-  hidden_dim2: 64
+  hidden_dim1: 256
+  hidden_dim2: 128
   dropout: 0.2
   num_layers: 2
 
