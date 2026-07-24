@@ -1,0 +1,27 @@
+{
+  "overall_recall": 0.06127632183812464,
+  "per_type": {
+    "SVI": {
+      "recall": 0.6007351891506068,
+      "captured": 168326,
+      "total_positive": 280200
+    },
+    "WVI": {
+      "recall": 0.28969415271771637,
+      "captured": 738568,
+      "total_positive": 2549475
+    },
+    "DVI": {
+      "recall": 0.002890697702000397,
+      "captured": 36316,
+      "total_positive": 12563057
+    }
+  },
+  "total_missed": 14449522,
+  "parameters": {
+    "k_nearest": 400,
+    "max_dist": 800,
+    "fov_deg": 120.0,
+    "margin_deg": 60
+  }
+}

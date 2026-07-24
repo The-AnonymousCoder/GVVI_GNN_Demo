@@ -1,0 +1,28 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.venv/
+venv/
+
+# Local credentials: never commit
+.gpu.env
+
+# Interrupted edge-level experiment: large and not used by the final Demo
+gvvi_graph_demo/processed/*.parquet
+gvvi_graph_demo/src/**/__pycache__/
+
+# New Demo generated artifacts
+gvvi_grid_demo/processed/
+gvvi_grid_demo/checkpoints/
+gvvi_grid_demo/outputs/*.tif
+gvvi_grid_demo/outputs/predictions.csv
+gvvi_grid_demo/outputs/**/*.parquet
+*.pt
+*.pth
+*.ckpt
+
+# Runtime logs
+*.log
+nohup.out

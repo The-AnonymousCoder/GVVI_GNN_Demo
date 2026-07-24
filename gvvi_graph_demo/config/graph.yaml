@@ -1,0 +1,69 @@
+# GVVI Graph Demo - Graph Configuration
+
+# Node features
+observation_features:
+  # View type encoding
+  view_type_encoding: true
+  # Position features
+  position_features:
+    - x
+    - y
+    - z
+  # Camera direction encoding (sin/cos)
+  direction_encoding: true
+  # Derived features
+  derived_features:
+    - height_above_ground  # approximated from min Z in area
+
+greenery_features:
+  position_features:
+    - center_x
+    - center_y
+    - center_z  # approximated
+  geometric_features:
+    - width          # grid_coords_max_x - grid_coords_min_x
+    - height         # grid_coords_max_y - grid_coords_min_y
+    - area           # width * height
+  color_features:
+    - R
+    - G
+    - B
+
+# Edge features
+edge_features:
+  distance_features:
+    - euclidean_distance_3d
+    - horizontal_distance_2d
+    - vertical_distance
+  angular_features:
+    - azimuth_difference_sin
+    - azimuth_difference_cos
+    - elevation_angle
+  combined_features:
+    - projected_size  # greenery_area / distance
+
+# Graph structure
+graph:
+  # Observation-observation kNN edges
+  obs_knn_k: 4
+  # Greenery-greenery kNN edges
+  greenery_knn_k: 4
+  # Heterogeneous edges are candidate edges (observation-greenery)
+
+# Model hyperparameters
+model:
+  hidden_dim: 64
+  num_layers: 2
+  dropout: 0.3
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  epochs: 200
+  early_stopping_patience: 30
+  batch_size: 1024
+
+# Loss weights
+loss:
+  visibility_weight: 1.0
+  pixel_weight: 0.5
+  gvvi_weight: 0.1
+  pos_weight_visibility: 3.0  # for BCE with class imbalance

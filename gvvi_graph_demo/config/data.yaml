@@ -1,0 +1,42 @@
+# GVVI Graph Demo - Data Configuration
+
+paths:
+  base_dir: "/Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI_GNN_Demo实施包"
+  relations:
+    SVI: "relations/SVI.csv"
+    WVI: "relations/WVI.csv"
+    DVI: "relations/DVI.csv"
+  viewpoints:
+    SVI: "viewpoints/SVI_position_road.csv"
+    WVI: "viewpoints/window_view_location.csv"
+    DVI: "viewpoints/DVI_position_60.csv"
+  greenery:
+    grid: "greenery/df_grid_ply.csv"
+    veg_raster: "greenery/veg_raster_buffer_100.tif"
+  reference:
+    GVVI_S: "reference/GVVI_S.tif"
+    GVVI_W: "reference/GVVI_W.tif"
+    GVVI_D: "reference/GVVI_D.tif"
+    GVVI: "reference/GVVI.tif"
+
+view_types: ["SVI", "WVI", "DVI"]
+
+# Candidate edge generation parameters
+candidate:
+  max_horizontal_distance: 500.0   # meters
+  fov_horizontal_deg: 120.0       # generous FoV for candidate inclusion
+  fov_margin_deg: 30.0            # safety margin
+  max_candidates_per_view: 50     # K nearest greenery per view
+  min_candidate_recall: 0.99
+
+# Spatial split parameters
+spatial_split:
+  num_blocks: 5
+  train_blocks: 3
+  val_blocks: 1
+  test_blocks: 1
+
+# Label budget experiment
+label_budget:
+  ratios: [0.05, 0.10, 0.20, 0.40, 0.60]
+  seeds: [42, 123, 456]
