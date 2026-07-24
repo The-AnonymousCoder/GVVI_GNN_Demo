@@ -19,6 +19,7 @@ def train_model(model, x, edge_index, targets, train_mask, val_mask, cfg, device
     wd = cfg["training"]["weight_decay"]
     max_epochs = cfg["training"]["max_epochs"]
     patience = cfg["training"]["early_stopping_patience"]
+    composite_loss_weight = cfg["training"].get("composite_loss_weight", 0.0)
 
     w_s = 3.0 / 6.0
     w_w = 2.0 / 6.0
@@ -63,7 +64,13 @@ def train_model(model, x, edge_index, targets, train_mask, val_mask, cfg, device
         loss_s = loss_fn(pred[t_mask, 0], y[t_mask, 0])
         loss_w = loss_fn(pred[t_mask, 1], y[t_mask, 1])
         loss_d = loss_fn(pred[t_mask, 2], y[t_mask, 2])
-        loss = w_s * loss_s + w_w * loss_w + w_d * loss_d
+        pred_gvvi = w_s * pred[t_mask, 0] + w_w * pred[t_mask, 1] + w_d * pred[t_mask, 2]
+        true_gvvi = w_s * y[t_mask, 0] + w_w * y[t_mask, 1] + w_d * y[t_mask, 2]
+        loss_gvvi = loss_fn(pred_gvvi, true_gvvi)
+        loss = (
+            w_s * loss_s + w_w * loss_w + w_d * loss_d
+            + composite_loss_weight * loss_gvvi
+        )
 
         if torch.isnan(loss) or torch.isinf(loss):
             print(f"Epoch {epoch:3d}: NaN/Inf train loss detected, skipping...")
@@ -81,7 +88,21 @@ def train_model(model, x, edge_index, targets, train_mask, val_mask, cfg, device
             v_loss_s = loss_fn(val_pred[v_mask, 0], y[v_mask, 0])
             v_loss_w = loss_fn(val_pred[v_mask, 1], y[v_mask, 1])
             v_loss_d = loss_fn(val_pred[v_mask, 2], y[v_mask, 2])
-            val_loss = w_s * v_loss_s + w_w * v_loss_w + w_d * v_loss_d
+            val_pred_gvvi = (
+                w_s * val_pred[v_mask, 0]
+                + w_w * val_pred[v_mask, 1]
+                + w_d * val_pred[v_mask, 2]
+            )
+            val_true_gvvi = (
+                w_s * y[v_mask, 0]
+                + w_w * y[v_mask, 1]
+                + w_d * y[v_mask, 2]
+            )
+            v_loss_gvvi = loss_fn(val_pred_gvvi, val_true_gvvi)
+            val_loss = (
+                w_s * v_loss_s + w_w * v_loss_w + w_d * v_loss_d
+                + composite_loss_weight * v_loss_gvvi
+            )
 
         if torch.isnan(val_loss) or torch.isinf(val_loss):
             print(f"Epoch {epoch:3d}: NaN/Inf val loss detected, skipping...")

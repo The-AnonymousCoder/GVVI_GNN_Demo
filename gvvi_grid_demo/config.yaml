@@ -34,8 +34,9 @@ training:
   test_frac: 0.15
   lr: 0.001
   weight_decay: 0.0001
-  max_epochs: 300
-  early_stopping_patience: 30
+  max_epochs: 600
+  early_stopping_patience: 60
+  composite_loss_weight: 1.0
 
 gvvi_weights:
   s: 3.0
