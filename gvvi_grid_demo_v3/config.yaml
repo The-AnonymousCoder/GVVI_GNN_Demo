@@ -1,0 +1,48 @@
+# GVVI Grid Demo V3 — 10-class classification
+# GVVI split into 10 bins like air quality index:
+# Class 0: GVVI=0 (no visibility)
+# Classes 1-9: deciles of non-zero GVVI
+
+data:
+  grid_csv: "greenery/df_grid_ply.csv"
+  svi_csv: "viewpoints/SVI_position_road.csv"
+  wvi_csv: "viewpoints/window_view_location.csv"
+  dvi_csv: "viewpoints/DVI_position_60.csv"
+  gvvi_s_tif: "reference/GVVI_S.tif"
+  gvvi_w_tif: "reference/GVVI_W.tif"
+  gvvi_d_tif: "reference/GVVI_D.tif"
+  gvvi_tif: "reference/GVVI.tif"
+
+graph:
+  k_local: 8
+  k_context: 24
+
+features:
+  radii: [50, 100, 250, 500]
+  height_radius: 250
+  heading_radius: 250
+  density_radius: 50
+  fov_half_angle: 60
+  distance_scales: [50, 100, 250]
+
+classification:
+  num_classes: 10
+  ordinal_weight: 0.3
+
+model:
+  hidden_dim: 256
+  sage_dim1: 256
+  sage_dim2: 128
+  fusion_dim: 256
+  dropout: 0.15
+
+training:
+  seed: 42
+  train_frac: 0.80
+  val_frac: 0.05
+  test_frac: 0.15
+  lr: 0.001
+  weight_decay: 0.0001
+  max_epochs: 1500
+  early_stopping_patience: 150
+  gradient_clip: 5.0
