@@ -509,32 +509,217 @@ python run_all.py --data-root .. --device cuda
 - 报告包含运行硬件和真实耗时；
 - 任何未运行结果不得写成已完成。
 
-## 12. Git与GPU交互规范
+## 12. DeepSeek在本机Mac、实验在远程GPU的操作规范
 
-GitHub 远程：
+DeepSeek运行在本机Mac上，不是在GPU服务器里。必须区分：
 
 ```text
-git@github.com:The-AnonymousCoder/GVVI_GNN_Demo.git
+本机Mac：阅读论文、修改代码、冒烟测试、Git commit/push、查看结果
+远程GPU：git pull、安装依赖、运行全量训练、生成实验结果
 ```
 
-GPU 服务器：
+### 12.1 本机项目与GPU配置文件
+
+本机项目绝对路径：
 
 ```text
-host: connect.nmb1.seetacloud.com
-port: 22754
-user: root
+/Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo
 ```
 
-密码只保存在仓库根目录的本地 `.gpu.env` 中，并由 `.gitignore` 排除。禁止把密码、token、私钥写入方案、代码、提交记录或远程仓库。
-
-交互方式：
+GPU配置文件绝对路径：
 
 ```text
-本地修改并push
-→ GPU服务器git pull
-→ GPU运行
-→ 只将指标、报告和图表commit并push
-→ 本地git pull查看结果
+/Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo/.gpu.env
+```
+
+`.gpu.env` 保存：
+
+```text
+GPU_HOST
+GPU_PORT
+GPU_USER
+GPU_PASSWORD
+GPU_PROJECT_DIR
+```
+
+DeepSeek可以读取该文件用于连接，但：
+
+- 不得在对话、终端输出、日志和报告中打印 `GPU_PASSWORD`；
+- 不得执行 `cat .gpu.env`；
+- 不得把 `.gpu.env` 加入Git；
+- 不得将密码拼进Git远程地址或命令参数；
+- 使用完密码变量后应执行 `unset GPU_PASSWORD`。
+
+读取非敏感连接参数：
+
+```bash
+cd /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo
+set -a
+source ./.gpu.env
+set +a
+printf 'GPU host=%s port=%s user=%s project=%s\n' \
+  "$GPU_HOST" "$GPU_PORT" "$GPU_USER" "$GPU_PROJECT_DIR"
+```
+
+### 12.2 SSH连接
+
+本机已经配置SSH别名和密钥，首选：
+
+```bash
+ssh mvgsage-4090
+```
+
+也可以使用配置文件中的地址：
+
+```bash
+ssh -p "$GPU_PORT" "$GPU_USER@$GPU_HOST"
+```
+
+若密钥临时不可用，再由SSH交互式提示输入密码。不要使用会把密码显示在进程列表或日志里的明文命令。
+
+连接后首先检查：
+
+```bash
+hostname
+nvidia-smi
+/root/miniconda3/bin/python --version
+git --version
+git lfs version
+df -h /
+```
+
+已审计的GPU环境：
+
+```text
+GPU：NVIDIA GeForce RTX 4090
+显存：24 GB
+Python：/root/miniconda3/bin/python
+远端项目目录：/root/GVVI_GNN_Demo
+```
+
+### 12.3 本机提交和推送
+
+GitHub仓库：
+
+```text
+https://github.com/The-AnonymousCoder/GVVI_GNN_Demo
+```
+
+代码本地冒烟测试通过后：
+
+```bash
+cd /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo
+git status
+git add gvvi_grid_demo 00_GVVI-GNN-Demo实现方案.md
+git commit -m "Implement grid-level GVVI GraphSAGE demo"
+git push origin main
+```
+
+提交前必须确认 `.gpu.env` 没有被跟踪：
+
+```bash
+git check-ignore -v .gpu.env
+git ls-files .gpu.env
+```
+
+第二条命令必须没有输出。
+
+### 12.4 在远程GPU首次获取代码
+
+进入GPU：
+
+```bash
+ssh mvgsage-4090
+```
+
+若远端项目不存在：
+
+```bash
+GIT_LFS_SKIP_SMUDGE=1 git clone \
+  https://github.com/The-AnonymousCoder/GVVI_GNN_Demo.git \
+  /root/GVVI_GNN_Demo
+
+cd /root/GVVI_GNN_Demo
+git lfs pull
+```
+
+若项目已存在：
+
+```bash
+cd /root/GVVI_GNN_Demo
+git fetch origin
+git checkout main
+git pull --ff-only origin main
+git lfs pull
+```
+
+检查版本：
+
+```bash
+git rev-parse --short HEAD
+git status --short
+```
+
+GPU运行的commit必须与本机刚push的commit一致。
+
+### 12.5 GPU安装依赖与运行
+
+使用明确的Python路径：
+
+```bash
+cd /root/GVVI_GNN_Demo
+/root/miniconda3/bin/python -m pip install -r gvvi_grid_demo/requirements.txt
+
+nvidia-smi
+/root/miniconda3/bin/python gvvi_grid_demo/run_all.py \
+  --data-root /root/GVVI_GNN_Demo \
+  --device cuda
+```
+
+若需要离开终端，在确认前台冒烟运行正常后再使用后台运行：
+
+```bash
+cd /root/GVVI_GNN_Demo
+nohup /root/miniconda3/bin/python gvvi_grid_demo/run_all.py \
+  --data-root /root/GVVI_GNN_Demo \
+  --device cuda \
+  > gvvi_grid_demo/run_gpu.log 2>&1 &
+echo $! > gvvi_grid_demo/run_gpu.pid
+```
+
+查看进度：
+
+```bash
+tail -n 100 -f /root/GVVI_GNN_Demo/gvvi_grid_demo/run_gpu.log
+nvidia-smi
+```
+
+判断是否结束：
+
+```bash
+GPU_PID=$(cat /root/GVVI_GNN_Demo/gvvi_grid_demo/run_gpu.pid)
+ps -p "$GPU_PID" -o pid,etime,cmd
+```
+
+### 12.6 结果回传
+
+首选方式是在GPU上只提交小型结果：
+
+```bash
+cd /root/GVVI_GNN_Demo
+git add \
+  gvvi_grid_demo/outputs/metrics.json \
+  gvvi_grid_demo/outputs/figures \
+  gvvi_grid_demo/reports/final_demo_report.md
+git commit -m "Add RTX 4090 GVVI demo results"
+git push origin main
+```
+
+然后在本机：
+
+```bash
+cd /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo
+git pull --ff-only origin main
 ```
 
 不要提交：
@@ -547,9 +732,44 @@ user: root
 - 新生成的大型 Parquet；
 - 临时日志。
 
+### 12.7 GPU服务器访问GitHub失败时的备用方案
+
+已观察到GPU服务器访问GitHub可能长时间阻塞。若一次 `clone/pull` 超过3分钟仍无进展，不要反复等待，改用本机Mac作为Git中继。
+
+本机将仓库同步到GPU，排除密钥、Git目录和旧大文件：
+
+```bash
+cd /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例
+rsync -az --progress \
+  --exclude '.git/' \
+  --exclude '.gpu.env' \
+  --exclude 'gvvi_graph_demo/processed/*.parquet' \
+  --exclude 'gvvi_grid_demo/processed/' \
+  --exclude 'gvvi_grid_demo/checkpoints/' \
+  GVVI-GNN-Demo/ \
+  mvgsage-4090:/root/GVVI_GNN_Demo/
+```
+
+GPU运行结束后，把小型结果拉回本机：
+
+```bash
+rsync -az --progress \
+  mvgsage-4090:/root/GVVI_GNN_Demo/gvvi_grid_demo/outputs/metrics.json \
+  /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo/gvvi_grid_demo/outputs/
+
+rsync -az --progress \
+  mvgsage-4090:/root/GVVI_GNN_Demo/gvvi_grid_demo/outputs/figures/ \
+  /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo/gvvi_grid_demo/outputs/figures/
+
+rsync -az --progress \
+  mvgsage-4090:/root/GVVI_GNN_Demo/gvvi_grid_demo/reports/final_demo_report.md \
+  /Users/wangfugui/线上交流_forLI/05_3D_CIM_概念示例/GVVI-GNN-Demo/gvvi_grid_demo/reports/
+```
+
+最后由本机检查结果、commit并push。备用方案仍然保持GitHub为唯一版本记录，只是避免依赖GPU服务器不稳定的外网连接。
+
 ## 13. 最终汇报的一句话
 
 如果实验达到最低标准：
 
 > 我使用论文公开的三类观察点和官方 GVVI 真值，将城市绿化划分为 10 m 对象节点，以周围街道、窗口和无人机观察条件作为廉价特征，并利用两层 GraphSAGE传播相邻绿化单元的空间上下文，实现了研究区内未计算网格的多视角 GVVI 快速补全。
-
