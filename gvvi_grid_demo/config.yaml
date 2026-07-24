@@ -1,0 +1,43 @@
+# GVVI Grid Demo - Fixed configuration
+# Do not tune these hyperparameters for the demo.
+
+data:
+  grid_csv: "greenery/df_grid_ply.csv"
+  veg_raster: "greenery/veg_raster_buffer_100.tif"
+  svi_csv: "viewpoints/SVI_position_road.csv"
+  wvi_csv: "viewpoints/window_view_location.csv"
+  dvi_csv: "viewpoints/DVI_position_60.csv"
+  gvvi_s_tif: "reference/GVVI_S.tif"
+  gvvi_w_tif: "reference/GVVI_W.tif"
+  gvvi_d_tif: "reference/GVVI_D.tif"
+  gvvi_tif: "reference/GVVI.tif"
+
+graph:
+  k: 8
+
+features:
+  radii: [50, 100, 250, 500]
+  height_radius: 250
+  heading_radius: 250
+  density_radius: 50
+
+model:
+  hidden_dim1: 128
+  hidden_dim2: 64
+  dropout: 0.2
+  num_layers: 2
+
+training:
+  seed: 42
+  train_frac: 0.70
+  val_frac: 0.15
+  test_frac: 0.15
+  lr: 0.001
+  weight_decay: 0.0001
+  max_epochs: 300
+  early_stopping_patience: 30
+
+gvvi_weights:
+  s: 3.0
+  w: 2.0
+  d: 1.0
