@@ -40,10 +40,10 @@ training:
   max_epochs: 1500
   early_stopping_patience: 150
   gradient_clip: 5.0
-  lambda_cls: 0.25
+  lambda_cls: 0.0
   lambda_reg: 1.0
   lambda_gvvi: 1.0
-  lambda_rank: 0.10
+  lambda_rank: 0.0
 
 gvvi_weights:
   s: 3.0

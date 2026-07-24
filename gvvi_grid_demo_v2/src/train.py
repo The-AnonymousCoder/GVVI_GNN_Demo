@@ -86,38 +86,29 @@ def train_model(model, features, edge_index_local, edge_index_context,
         optimizer.zero_grad()
         preds, p_nonzeros, p_values = model(x_tensor, ei_local, ei_context)
 
-        # BCE for nonzero classification
-        targets_nz = (y > 0).float()
-        loss_cls_s = bce_fn(p_nonzeros[t_mask, 0], targets_nz[t_mask, 0])
-        loss_cls_w = bce_fn(p_nonzeros[t_mask, 1], targets_nz[t_mask, 1])
-        loss_cls_d = bce_fn(p_nonzeros[t_mask, 2], targets_nz[t_mask, 2])
-        loss_cls = (loss_cls_s + loss_cls_w + loss_cls_d) / 3.0
+        # Weighted MSE on 3 components
+        loss_s = F.mse_loss(preds[t_mask, 0], y[t_mask, 0])
+        loss_w = F.mse_loss(preds[t_mask, 1], y[t_mask, 1])
+        loss_d = F.mse_loss(preds[t_mask, 2], y[t_mask, 2])
+        loss_reg = w_s * loss_s + w_w * loss_w + w_d * loss_d
 
-        # SmoothL1 for positive values (only where true > 0)
-        loss_reg_s = torch.tensor(0.0, device=device)
-        loss_reg_w = torch.tensor(0.0, device=device)
-        loss_reg_d = torch.tensor(0.0, device=device)
-        for j in range(3):
-            mask_pos = t_mask & (y[:, j] > 0)
-            if mask_pos.sum() > 0:
-                if j == 0:
-                    loss_reg_s = smooth_l1(p_values[mask_pos, 0], y[mask_pos, 0])
-                elif j == 1:
-                    loss_reg_w = smooth_l1(p_values[mask_pos, 1], y[mask_pos, 1])
-                else:
-                    loss_reg_d = smooth_l1(p_values[mask_pos, 2], y[mask_pos, 2])
-        loss_reg = w_s * loss_reg_s + w_w * loss_reg_w + w_d * loss_reg_d
-
-        # GVVI composite loss
+        # GVVI composite loss (directly on 3:2:1 composite)
         pred_gvvi = w_s * preds[t_mask, 0] + w_w * preds[t_mask, 1] + w_d * preds[t_mask, 2]
         true_gvvi = w_s * y[t_mask, 0] + w_w * y[t_mask, 1] + w_d * y[t_mask, 2]
         loss_gvvi = F.mse_loss(pred_gvvi, true_gvvi)
 
-        # Pairwise ranking loss (pred_gvvi is already train-only)
+        # BCE classification loss (only if weight > 0)
+        loss_cls = torch.tensor(0.0, device=device)
+        if lam_cls > 0:
+            targets_nz = (y > 0).float()
+            for j in range(3):
+                loss_cls += F.binary_cross_entropy(p_nonzeros[t_mask, j], targets_nz[t_mask, j])
+            loss_cls = loss_cls / 3.0
+
+        # Ranking loss (only if weight > 0)
+        loss_rank = torch.tensor(0.0, device=device)
         if lam_rank > 0:
             loss_rank = rank_loss_fn(pred_gvvi, true_gvvi, None)
-        else:
-            loss_rank = torch.tensor(0.0, device=device)
 
         loss = lam_cls * loss_cls + lam_reg * loss_reg + lam_gvvi * loss_gvvi + lam_rank * loss_rank
 
@@ -134,7 +125,7 @@ def train_model(model, features, edge_index_local, edge_index_context,
         # Validation
         model.eval()
         with torch.no_grad():
-            v_preds, v_pnz, v_pv = model(x_tensor, ei_local, ei_context)
+            v_preds, _, _ = model(x_tensor, ei_local, ei_context)
             v_pred_gvvi = w_s * v_preds[v_mask, 0] + w_w * v_preds[v_mask, 1] + w_d * v_preds[v_mask, 2]
             v_true_gvvi = w_s * y[v_mask, 0] + w_w * y[v_mask, 1] + w_d * y[v_mask, 2]
             val_loss = F.mse_loss(v_pred_gvvi, v_true_gvvi)
@@ -148,9 +139,7 @@ def train_model(model, features, edge_index_local, edge_index_context,
 
         if epoch <= 5 or epoch % 50 == 0:
             print(f"Epoch {epoch:4d}: loss={loss.item():.6f}, val={val_loss.item():.6f}, "
-                  f"lr={optimizer.param_groups[0]['lr']:.6f}, "
-                  f"cls={loss_cls.item():.4f}, reg={loss_reg.item():.4f}, "
-                  f"gvvi={loss_gvvi.item():.4f}, rank={loss_rank.item():.4f}")
+                  f"lr={optimizer.param_groups[0]['lr']:.6f}")
 
         if val_loss < best_val_loss - 1e-8:
             best_val_loss = val_loss; best_epoch = epoch
