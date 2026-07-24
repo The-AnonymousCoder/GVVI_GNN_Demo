@@ -87,6 +87,14 @@ def main():
         targets, cfg, f"{demo_dir}/processed"
     )
 
+    # === Step 5b: Standardize features (fit on train only) ===
+    from sklearn.preprocessing import StandardScaler
+    scaler = StandardScaler()
+    X_train = X[train_mask]
+    scaler.fit(X_train)
+    X = scaler.transform(X).astype(np.float32)
+    print(f"Features standardized (fit on {train_mask.sum()} train nodes)")
+
     # === Step 6: Create model ===
     print("=" * 60)
     print("MODEL: Two-layer GraphSAGE")

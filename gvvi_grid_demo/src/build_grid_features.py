@@ -185,6 +185,12 @@ def build_grid_features(data_root, grid_df, cfg):
     feature_blocks.append(density)
     feature_names.append("neighbor_density")
 
+    # Log-transform count features (skewed distributions)
+    count_cols = [k for k in feature_names if "count" in k]
+    for i, name in enumerate(feature_names):
+        if name in count_cols:
+            feature_blocks[i] = np.log1p(feature_blocks[i])
+
     X = np.stack(feature_blocks, axis=1).astype(np.float32)
 
     # Check for NaN/Inf

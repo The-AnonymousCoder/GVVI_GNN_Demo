@@ -38,8 +38,9 @@ def train_model(model, x, edge_index, targets, train_mask, val_mask, cfg, device
 
     model = model.to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=10, min_lr=1e-6)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", factor=0.5, patience=15, min_lr=1e-6)
 
+    loss_fn = nn.MSELoss()
     best_val_loss = float("inf")
     best_epoch = 0
     patience_counter = 0
@@ -59,9 +60,9 @@ def train_model(model, x, edge_index, targets, train_mask, val_mask, cfg, device
         model.train()
         optimizer.zero_grad()
         pred = model(x_tensor, edge_index)
-        loss_s = nn.SmoothL1Loss()(pred[t_mask, 0], y[t_mask, 0])
-        loss_w = nn.SmoothL1Loss()(pred[t_mask, 1], y[t_mask, 1])
-        loss_d = nn.SmoothL1Loss()(pred[t_mask, 2], y[t_mask, 2])
+        loss_s = loss_fn(pred[t_mask, 0], y[t_mask, 0])
+        loss_w = loss_fn(pred[t_mask, 1], y[t_mask, 1])
+        loss_d = loss_fn(pred[t_mask, 2], y[t_mask, 2])
         loss = w_s * loss_s + w_w * loss_w + w_d * loss_d
 
         if torch.isnan(loss) or torch.isinf(loss):
@@ -77,9 +78,9 @@ def train_model(model, x, edge_index, targets, train_mask, val_mask, cfg, device
         model.eval()
         with torch.no_grad():
             val_pred = model(x_tensor, edge_index)
-            v_loss_s = nn.SmoothL1Loss()(val_pred[v_mask, 0], y[v_mask, 0])
-            v_loss_w = nn.SmoothL1Loss()(val_pred[v_mask, 1], y[v_mask, 1])
-            v_loss_d = nn.SmoothL1Loss()(val_pred[v_mask, 2], y[v_mask, 2])
+            v_loss_s = loss_fn(val_pred[v_mask, 0], y[v_mask, 0])
+            v_loss_w = loss_fn(val_pred[v_mask, 1], y[v_mask, 1])
+            v_loss_d = loss_fn(val_pred[v_mask, 2], y[v_mask, 2])
             val_loss = w_s * v_loss_s + w_w * v_loss_w + w_d * v_loss_d
 
         if torch.isnan(val_loss) or torch.isinf(val_loss):
