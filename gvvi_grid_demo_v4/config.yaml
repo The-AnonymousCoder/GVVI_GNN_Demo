@@ -1,0 +1,40 @@
+# V4: 4-class GVVI classification sprint
+# Task: 85% known labels, predict remaining 15% test nodes
+
+data:
+  grid_csv: "greenery/df_grid_ply.csv"
+  svi_csv: "viewpoints/SVI_position_road.csv"
+  wvi_csv: "viewpoints/window_view_location.csv"
+  dvi_csv: "viewpoints/DVI_position_60.csv"
+  gvvi_tif: "reference/GVVI.tif"
+
+classes:
+  num_classes: 4
+  percentiles: [60, 85, 97]  # train-only
+
+graph:
+  queen: true
+  spatial_k: 8
+  spatial_max_dist: 200
+  feature_k: 4
+  feature_max_dist: 250
+
+model:
+  geom_hidden: 256
+  label_hidden: 64
+  gat_heads: 4
+  gat_hidden: 64
+  num_layers: 2
+  dropout: 0.15
+
+training:
+  seed: 42
+  mask_rate: 0.25
+  lr: 0.001
+  weight_decay: 0.0001
+  max_epochs: 800
+  early_stopping_patience: 100
+  gradient_clip: 5.0
+  focal_gamma: 1.5
+  focal_beta: 0.999
+  ordinal_weight: 0.2
