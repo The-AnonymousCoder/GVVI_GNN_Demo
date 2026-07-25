@@ -235,6 +235,54 @@ def build_grid_features_v2(data_root, grid_df, cfg):
             feature_names.append(f"wvi_{stat}_{r}"); feature_blocks.append(arr)
 
     # ================================================================
+    # BLOCK 3b: Building occlusion proxies
+    # ================================================================
+    print("  Computing building occlusion proxies...")
+    wvi_nx = wvi_df["normal_x"].values.astype(np.float32)
+    wvi_ny = wvi_df["normal_y"].values.astype(np.float32)
+    wvi_height = (wvi_roof - wvi_base).astype(np.float32)  # building height
+
+    for r in [50, 100, 250]:
+        indices = wvi_tree.query_radius(grid_centers, r=r)
+        # Facade-facing dot product: positive = grid is in front of facade
+        facade_dot_mean = np.zeros(n_nodes, dtype=np.float32)
+        facade_dot_max = np.zeros(n_nodes, dtype=np.float32)
+        facade_ff_ratio = np.zeros(n_nodes, dtype=np.float32)  # fraction of facades facing grid
+        bldg_height_mean = np.zeros(n_nodes, dtype=np.float32)
+        bldg_height_max = np.zeros(n_nodes, dtype=np.float32)
+        bldg_volume_proxy = np.zeros(n_nodes, dtype=np.float32)  # sum of heights
+        tall_bldg_ratio = np.zeros(n_nodes, dtype=np.float32)  # ROOFLEVEL > 30m
+
+        for i, idx in enumerate(indices):
+            if len(idx) > 0:
+                gx, gy = grid_centers[i]
+                wx = wvi_coords[idx, 0]; wy = wvi_coords[idx, 1]
+                # Vector from window to grid
+                dx = gx - wx; dy = gy - wy
+                dist_w = np.sqrt(dx**2 + dy**2) + 1e-8
+                dx_n = dx / dist_w; dy_n = dy / dist_w
+                # Dot product with facade normal: positive = grid is in front
+                dots = dx_n * wvi_nx[idx] + dy_n * wvi_ny[idx]
+                facade_dot_mean[i] = dots.mean()
+                facade_dot_max[i] = dots.max()
+                facade_ff_ratio[i] = (dots > 0).mean()
+
+                heights = wvi_height[idx]
+                if len(heights) > 0:
+                    bldg_height_mean[i] = heights.mean()
+                    bldg_height_max[i] = heights.max()
+                    bldg_volume_proxy[i] = heights.sum()
+                roofs = wvi_roof[idx]
+                if len(roofs) > 0:
+                    tall_bldg_ratio[i] = (roofs > 30.0).mean()
+
+        for stat, arr in [("facade_dot_mean", facade_dot_mean), ("facade_dot_max", facade_dot_max),
+                          ("facade_ff_ratio", facade_ff_ratio), ("bldg_h_mean", bldg_height_mean),
+                          ("bldg_h_max", bldg_height_max), ("bldg_volume", bldg_volume_proxy),
+                          ("tall_ratio", tall_bldg_ratio)]:
+            feature_names.append(f"occ_{stat}_{r}"); feature_blocks.append(arr)
+
+    # ================================================================
     # BLOCK 4: SVI road context
     # ================================================================
     print("  Computing SVI road context...")
