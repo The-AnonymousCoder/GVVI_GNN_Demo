@@ -1,16 +1,16 @@
 {
-  "accuracy": 1.0,
-  "balanced_accuracy": 1.0,
-  "f1_macro": 1.0,
-  "f1_weighted": 1.0,
-  "acc_within_1": 1.0,
-  "spearman": NaN,
-  "spearman_soft": NaN,
-  "mae_soft": 0.2700367248058319,
+  "accuracy": 0.6546068499758804,
+  "balanced_accuracy": 0.3553517546893223,
+  "f1_macro": 0.35609526301438205,
+  "f1_weighted": 0.6090976241715649,
+  "acc_within_1": 0.9196816208393632,
+  "spearman": 0.47273478214838377,
+  "spearman_soft": 0.6097536349116564,
+  "mae_soft": 0.4656037231542222,
   "thresholds": [
-    0.0,
-    0.0,
-    0.0
+    0.024580548505964327,
+    0.06682735797474335,
+    0.14498819976749602
   ],
-  "best_epoch": 3
+  "best_epoch": 28
 }
