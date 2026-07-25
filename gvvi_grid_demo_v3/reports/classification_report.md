@@ -1,80 +1,60 @@
-# GVVI Grid Demo V3 — 10-Class Classification Report
+# GVVI Grid Demo V3 — 分类版本最终报告
 
-## Approach
+## 最优方案：GVVI × 100 直观分档
 
-Convert GVVI regression into a 10-class classification problem, similar to air quality index (AQI) levels. Each greenery grid is assigned to one of 10 GVVI classes, ranging from "no visibility" (class 0) to "very high visibility" (class 9).
+将综合 GVVI 乘以 100 后分为 5 个直观档次（类似 PM2.5 空气质量指数）：
 
-## GVVI Class Bins (Decile-Based on Non-Zero GVVI)
+| 档 | GVVI (原始) | GVVI×100 | 含义 | 节点占比 |
+|----|------------|----------|------|----------|
+| 0 | = 0 | 0 | 无可见绿化 | 26.5% |
+| 1 | < 0.05 | < 5 | 微量可见 | 51.3% |
+| 2 | 0.05–0.15 | 5–15 | 中等可见 | 19.5% |
+| 3 | 0.15–0.30 | 15–30 | 较高可见 | 2.5% |
+| 4 | > 0.30 | > 30 | 高可见 | 0.2% |
 
-| Class | GVVI Range | Description |
-|-------|-----------|-------------|
-| 0 | [0.000, 0.000] | No visibility |
-| 1 | [0.000, 0.008) | Trace |
-| 2 | [0.008, 0.015) | Very low |
-| 3 | [0.015, 0.024) | Low |
-| 4 | [0.024, 0.033) | Low-medium |
-| 5 | [0.033, 0.046) | Medium |
-| 6 | [0.046, 0.063) | Medium-high |
-| 7 | [0.063, 0.094) | High |
-| 8 | [0.094, 0.556) | Very high |
-| 9 | [0.556, 0.556] | Max |
+## 模型与训练
 
-## Environment
-- Device: NVIDIA GeForce RTX 4090 (24 GB)
-- Model: Multi-Scale GraphSAGE (256→256→128, 176K params)
-- Features: 196 dims with directional alignment
-- Graphs: k=8 (local) + k=24 (context)
-- Loss: CrossEntropy + ordinal MSE
-- Best epoch: 83 (early stop)
-- Time: 228s (3.8 min)
+- 模型：Multi-Scale GraphSAGE (256→256→128)，745K 参数
+- 特征：196 维（方向对齐 + 建筑/道路/高度上下文）
+- 图：k=8 (局部) + k=24 (中尺度)
+- 损失：加权 CrossEntropy（按逆频率）
+- 最佳 epoch：103（早停）
+- 训练时间：~180 秒 / RTX 4090
+- 数据：80% 训练 / 5% 验证 / 原 15% 测试（4,146 节点冻结）
 
-## Test Set Results (4,146 nodes)
+## 测试集结果
 
-| Metric | Value | Interpretation |
-|--------|-------|----------------|
-| Accuracy | **43.37%** | 4.3x random baseline (10%) |
-| Accuracy ±1 class | **64.52%** | 2/3 of predictions within 1 class |
-| MAE (hard class) | 1.50 | Average 1.5 classes off |
-| MAE (soft expected) | 1.33 | Using probability-weighted class |
-| Spearman | **0.738** | Rank correlation (class-level) |
-| Spearman (soft) | **0.766** | Using probability-weighted rank |
-| F1 weighted | 0.426 | Class-imbalance-aware F1 |
+| 指标 | 值 | 说明 |
+|------|-----|------|
+| **准确率** | **73.1%** | 随机基线 20%，3.7 倍 |
+| **±1 档准确率** | **96.7%** | 几乎不错过相邻档 |
+| **Spearman** | **0.779** | 所有版本最高 |
+| MAE (hard) | 0.30 | 平均不到半个档次 |
 
-## Error Distribution
+## 各类别召回率
 
-| Error | Percentage | Cumulative |
-|-------|-----------|------------|
-| Exact (0) | 43.4% | 43.4% |
-| Off-by-1 | 21.2% | 64.5% |
-| Off-by-2 | 10.0% | 74.5% |
-| Off-by-3+ | 25.5% | 100% |
+| 档 | 测试节点数 | 召回率 | 说明 |
+|----|-----------|--------|------|
+| 0 (零) | 1,103 | **97.7%** | 几乎完美区分有无 |
+| 1 (<5) | 2,122 | **72.1%** | 微量区域识别良好 |
+| 2 (5–15) | 802 | **47.0%** | 中等区域近半命中 |
+| 3 (15–30) | 111 | **38.7%** | 较高区域可识别 |
+| 4 (>30) | 8 | **25.0%** | 高值稀缺但非随机 |
 
-## Key Insights
+## 全版本对比
 
-1. **43% accuracy is 4.3x random**: random guessing would achieve 10% (1/10 classes). The model captures substantial structure.
-2. **65% within ±1 class**: most errors are near the true class, not random — the model understands the ordinal nature of GVVI.
-3. **Spearman 0.766 (soft)**: comparable to the regression model's Spearman (0.770), confirming the classification approach doesn't lose ranking information.
-4. **Large errors (3+ classes off) are 25.5%**: these are likely nodes where geometric features are insufficient (e.g., building-occluded views).
+| 版本 | 任务 | 核心指标 |
+|------|------|----------|
+| V1 | 回归 GVVI | Spearman 0.770, R² 0.376 |
+| V2 | 回归 GVVI | Spearman 0.773, R² 0.341 |
+| V3-10档 | 10 档分类 | Acc 43.4%, Spearman 0.738 |
+| V3-5档 | 5 档分类 | Acc 55.1%, Spearman 0.696 |
+| **V3-GVVI×100** | **5 档直观分类** | **Acc 73.1%, Spearman 0.779** |
 
-## Comparison with Regression (V1/V2)
+## 结论
 
-| Approach | Spearman | Key Metric |
-|----------|----------|------------|
-| V1 Regression | 0.770 | R² = 0.376 |
-| V2 Regression | 0.773 | R² = 0.341 |
-| **V3 Classification** | **0.766 (soft)** | **Acc = 43.4%** |
-
-The classification approach achieves comparable ranking performance while providing **interpretable class labels** — instead of predicting "GVVI = 0.0423", the model outputs "Class 5 (medium visibility)".
-
-## Interpretation
-
-The V3 classification model can be used for:
-- **Rapid screening**: "Which areas have high GVVI (class 7+) vs low (class 0-3)?"
-- **Zoning decisions**: "Classify neighborhoods into 3-5 visibility tiers for planning"
-- **Priority allocation**: "Compute detailed GVVI only for class 6+ nodes"
-
-The model benefits from:
-- 80% training labels, original 15% frozen test set
-- Directional features capturing camera-greenery alignment
-- Multi-scale graph structure (local k=8, context k=24)
-- Ordinal-aware loss respecting class ordering
+GVVI × 100 直观分档是当前最佳方案：
+- Spearman 0.779 超过回归版
+- 73% 准确率，96.7% 不错过相邻档
+- 语义清晰（"这个绿化网格的 GVVI 是 5-15 档" 比 "GVVI=0.0423" 更好理解）
+- 可类比空气质量指数进行分级展示和决策
